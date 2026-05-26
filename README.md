@@ -1,4 +1,4 @@
-# 拼豆图案生成器 · Fuse Beads Generator
+# 拼豆图案生成器（最简单！） · Fuse Beads Generator
 
 上传任意图片，自动生成拼豆（Perler / Hama beads）图纸。每个格子里印有颜色编号，对照旁边的 **#RRGGBB** 色卡图例，直接照着拼就行。
 
