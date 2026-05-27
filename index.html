@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拼豆图案生成器</title>
+<style>
+  :root {
+    --bg: #f8f5f0; --card: #ffffff; --text: #2c2416;
+    --muted: #8b7355; --accent: #d4845a; --border: #e0d6c8; --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", "PingFang SC", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  header p { color: var(--muted); font-size: 13px; }
+
+  .layout { display: flex; gap: 24px; align-items: flex-start; }
+  .panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; width: 320px; flex-shrink: 0;
+  }
+  .panel label {
+    display: block; font-size: 12px; font-weight: 600; margin-bottom: 3px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .panel input[type="range"] { width: 100%; margin-bottom: 14px; accent-color: var(--accent); }
+  .range-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .checkbox-row input { accent-color: var(--accent); }
+  .checkbox-row label { margin: 0 !important; letter-spacing: 0 !important; text-transform: none !important; font-weight: 400 !important; font-size: 13px !important; }
+
+  .btn {
+    width: 100%; padding: 11px; border: none; border-radius: 8px;
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 28px 12px; text-align: center; color: var(--muted);
+    font-size: 12px; margin-bottom: 16px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); }
+  .drop-zone img { max-width: 100%; max-height: 140px; border-radius: 6px; margin-bottom: 4px; }
+
+  .preview-area {
+    flex: 1; min-height: 400px; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    position: relative;
+  }
+  .preview-area .placeholder { color: var(--muted); font-size: 13px; text-align: center; padding: 40px; }
+  .preview-area img { max-width: 100%; max-height: 78vh; cursor: pointer; }
+  .spinner {
+    display: none; width: 22px; height: 22px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #download-row { display: none; text-align: center; margin-top: 10px; }
+  #download-row a { color: var(--accent); font-size: 12px; font-weight: 600; text-decoration: none; }
+
+  @media (max-width: 720px) { .layout { flex-direction: column; } .panel { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>拼豆图案生成器</h1>
+    <p>上传图片 → 调参数 → 生成图纸，格子内印有颜色编号，跟图例一一对应</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="drop-zone" id="dropZone">
+        <div id="dropText">拖拽图片到这里<br>或点击选择文件</div>
+        <img id="uploadPreview" style="display:none" alt="">
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+      <label>画布宽度（拼豆数量）</label>
+      <input type="range" id="widthSlider" min="10" max="150" value="50">
+      <div class="range-row"><span>10</span><span id="widthVal">50</span><span>150</span></div>
+
+      <label>颜色数量</label>
+      <input type="range" id="nColorsSlider" min="3" max="40" value="12">
+      <div class="range-row"><span>3</span><span id="nColorsVal">12</span><span>40</span></div>
+
+      <label>每颗拼豆像素大小</label>
+      <input type="range" id="beadSizeSlider" min="6" max="40" value="20">
+      <div class="range-row"><span>6</span><span id="beadSizeVal">20</span><span>40</span></div>
+
+      <label>格子间距（像素）</label>
+      <input type="range" id="gridSlider" min="0" max="6" value="2">
+      <div class="range-row"><span>0</span><span id="gridVal">2</span><span>6</span></div>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="showNumbers" checked>
+        <label for="showNumbers">格子里显示颜色编号</label>
+      </div>
+
+      <button class="btn" id="generateBtn" disabled>生成拼豆图纸</button>
+      <div id="download-row"><a id="downloadLink" href="#">下载 PNG</a></div>
+    </div>
+
+    <div class="preview-area" id="previewArea">
+      <div class="placeholder" id="placeholder">生成后的拼豆图纸<br>会显示在这里</div>
+      <div class="spinner" id="spinner"></div>
+      <img id="resultImg" style="display:none" alt="拼豆结果">
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  Real fuse-bead colour palette  (same as beads.py)
+// ═══════════════════════════════════════════════════════════════════════════
+const FUSE_BEAD_PALETTE = [
+  "#FEFEFE","#FFFDD0","#F5E6D3","#F5DEB3",  // Whites / Creams
+  "#D2B48C","#CDAA7D","#A67C52","#8B5E3C","#5C3A21","#3E2723",  // Browns
+  "#D3D3D3","#C0C0C0","#A9A9A9","#808080","#58595B","#404040",  // Greys
+  "#FFB6C1","#FF9AAE","#FF69B4","#E75480","#FF1493","#C71585",  // Pinks
+  "#E23D28","#DC143C","#BE0032","#A9203E","#800020","#CC3333",  // Reds
+  "#FFDAB9","#FFCBA4","#FFB347","#FF8C00","#FF5E00","#FF6719",  // Oranges
+  "#FFFACD","#FFF44F","#FFD700","#FDDC01","#E8A600",            // Yellows
+  "#B5EAD7","#90EE90","#A9D155","#C1D82F","#8BC34A","#32CD32",  // Greens
+  "#228B22","#009E60","#006400","#1B4D3E",                       // Dark greens
+  "#7ED0C4","#48D1CC","#20B2AA","#008080","#006D6F",            // Teals
+  "#B3D9FF","#ADD8E6","#87CEEB","#5DADE2","#1E90FF",            // Blues
+  "#4169E1","#0059B3","#000080","#002A6E",                       // Dark blues
+  "#E6E6FA","#D8BFD8","#C792C1","#9B7FBD","#800080","#6C3A8B","#4A2060",  // Purples
+  "#1A1A1A",                                                     // Black
+];
+const PALETTE_RGB = FUSE_BEAD_PALETTE.map(hexToRgb);
+
+function hexToRgb(h) {
+  return [parseInt(h[1]+h[2],16), parseInt(h[3]+h[4],16), parseInt(h[5]+h[6],16)];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Pure-JS k-means  (replaces sklearn / numpy k-means)
+// ═══════════════════════════════════════════════════════════════════════════
+function kmeansPixels(pixels, k) {
+  const n = pixels.length;
+  // pick initial centroids evenly across the data
+  const step = Math.max(1, Math.floor(n / k));
+  const centroids = [];
+  for (let i = 0; i < k; i++) {
+    const p = pixels[Math.min(i * step, n - 1)];
+    centroids.push([p[0], p[1], p[2]]);
+  }
+  const labels = new Int32Array(n);
+  const maxIter = 25;
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    let changes = 0;
+    for (let i = 0; i < n; i++) {
+      const p = pixels[i];
+      let best = 0, bestD = Infinity;
+      for (let j = 0; j < k; j++) {
+        const c = centroids[j];
+        const d = (p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2;
+        if (d < bestD) { bestD = d; best = j; }
+      }
+      if (labels[i] !== best) { changes++; labels[i] = best; }
+    }
+    if (changes === 0) break;
+
+    // recompute centroids
+    const sums = Array.from({length:k}, () => [0,0,0]);
+    const counts = new Int32Array(k);
+    for (let i = 0; i < n; i++) {
+      const l = labels[i], p = pixels[i];
+      sums[l][0] += p[0]; sums[l][1] += p[1]; sums[l][2] += p[2];
+      counts[l]++;
+    }
+    for (let j = 0; j < k; j++) {
+      if (counts[j]) {
+        centroids[j][0] = sums[j][0] / counts[j];
+        centroids[j][1] = sums[j][1] / counts[j];
+        centroids[j][2] = sums[j][2] / counts[j];
+      }
+    }
+  }
+  return centroids;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Rendering: bead grid + legend → single canvas
+// ═══════════════════════════════════════════════════════════════════════════
+function luminance(r, g, b) { return 0.299*r + 0.587*g + 0.114*b; }
+
+function renderResult(quantized, w, h, paletteHex, paletteRGB,
+                      beadSize, grid, showNums) {
+  const gridW = w * (beadSize + grid) + grid;
+  const gridH = h * (beadSize + grid) + grid;
+  const legendW = _legendWidth(paletteHex.length, beadSize, grid);
+  const legendH = _legendHeight(paletteHex.length, beadSize, grid);
+  const totalW = gridW + legendW;
+  const totalH = Math.max(gridH, legendH);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = totalW;
+  canvas.height = totalH;
+  const ctx = canvas.getContext("2d");
+
+  // background
+  ctx.fillStyle = "rgb(60,60,60)";
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // ── bead grid ──
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = quantized[y * w + x];
+      const [r, g, b] = paletteRGB[idx];
+      const x0 = grid + x * (beadSize + grid);
+      const y0 = grid + y * (beadSize + grid);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x0, y0, beadSize, beadSize);
+    }
+  }
+
+  // ── numbers ──
+  if (showNums && beadSize >= 8) {
+    const fontSize = Math.max(8, Math.floor(beadSize * 0.55));
+    ctx.font = `${fontSize}px -apple-system, "Helvetica Neue", "PingFang SC", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = quantized[y * w + x];
+        const label = String(idx + 1);
+        const tw = ctx.measureText(label).width;
+        if (tw > beadSize - 2) continue;  // skip if text doesn't fit
+        const [r, g, b] = paletteRGB[idx];
+        ctx.fillStyle = luminance(r, g, b) < 140 ? "#fff" : "#000";
+        const cx = grid + x * (beadSize + grid) + beadSize / 2;
+        const cy = grid + y * (beadSize + grid) + beadSize / 2;
+        ctx.fillText(label, cx, cy);
+      }
+    }
+  }
+
+  // ── legend ──
+  const lx = gridW;
+  const swatch = Math.max(beadSize, 16);
+  const pad = grid * 4;
+  const lineH = swatch + pad;
+  const fontLegend = Math.max(10, swatch - 4);
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(lx, 0, legendW, totalH);
+
+  ctx.fillStyle = "rgb(30,30,30)";
+  ctx.font = `${fontLegend}px -apple-system, "Helvetica Neue", "PingFang SC", sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+
+  for (let i = 0; i < paletteHex.length; i++) {
+    const y = pad + i * lineH;
+    const [r, g, b] = paletteRGB[i];
+
+    // swatch rect
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fillRect(pad, y, swatch, swatch);
+    ctx.strokeStyle = "rgb(40,40,40)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pad, y, swatch, swatch);
+
+    // label
+    ctx.fillStyle = "rgb(30,30,30)";
+    const label = `#${i+1}  ${paletteHex[i]}`;
+    ctx.fillText(label, pad + swatch + pad, y + swatch * 0.7);
+  }
+
+  return canvas;
+}
+
+function _legendWidth(n, beadSize, grid) {
+  const swatch = Math.max(beadSize, 16);
+  const pad = grid * 4;
+  return swatch + pad * 3 + 120;
+}
+function _legendHeight(n, beadSize, grid) {
+  const swatch = Math.max(beadSize, 16);
+  const pad = grid * 4;
+  return n * (swatch + pad) + pad * 2;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Main pipeline
+// ═══════════════════════════════════════════════════════════════════════════
+function processImage(imgEl, width, nColors, beadSize, grid, showNums) {
+  // 1. resize image to target width (keeping aspect ratio)
+  const ratio = width / imgEl.naturalWidth;
+  const h = Math.max(1, Math.round(imgEl.naturalHeight * ratio));
+  const w = width;
+
+  const tmpCanvas = document.createElement("canvas");
+  tmpCanvas.width = w;
+  tmpCanvas.height = h;
+  const tmpCtx = tmpCanvas.getContext("2d");
+  tmpCtx.drawImage(imgEl, 0, 0, w, h);
+
+  // 2. extract pixels
+  const imgData = tmpCtx.getImageData(0, 0, w, h);
+  const data = imgData.data;
+  const pixels = [];
+  for (let i = 0; i < data.length; i += 4) {
+    pixels.push([data[i], data[i+1], data[i+2]]);
+  }
+
+  // 3. subsample for k-means if image is large (keeps it snappy)
+  const MAX_KM_SAMPLES = 6000;
+  let kmPixels = pixels;
+  if (pixels.length > MAX_KM_SAMPLES) {
+    const step = Math.floor(pixels.length / MAX_KM_SAMPLES);
+    kmPixels = [];
+    for (let i = 0; i < pixels.length; i += step) kmPixels.push(pixels[i]);
+  }
+
+  // 4. run k-means on subsampled data, then assign ALL pixels
+  const centers = kmeansPixels(kmPixels, nColors);
+
+  // snap centroids to real bead colours (dedup)
+  const snappedSet = new Set();
+  for (const ct of centers) {
+    let best = 0, bestD = Infinity;
+    for (let j = 0; j < PALETTE_RGB.length; j++) {
+      const p = PALETTE_RGB[j];
+      const d = (ct[0]-p[0])**2 + (ct[1]-p[1])**2 + (ct[2]-p[2])**2;
+      if (d < bestD) { bestD = d; best = j; }
+    }
+    snappedSet.add(best);
+  }
+  const globalIdx = [...snappedSet].sort((a,b) => a-b);
+  const paletteRGB = globalIdx.map(i => PALETTE_RGB[i]);
+  const paletteHex = globalIdx.map(i => FUSE_BEAD_PALETTE[i]);
+
+  // assign every pixel to nearest snapped colour
+  const quantized = new Int32Array(w * h);
+  for (let i = 0; i < pixels.length; i++) {
+    const p = pixels[i];
+    let best = 0, bestD = Infinity;
+    for (let j = 0; j < paletteRGB.length; j++) {
+      const c = paletteRGB[j];
+      const d = (p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2;
+      if (d < bestD) { bestD = d; best = j; }
+    }
+    quantized[i] = best;
+  }
+
+  // 5. render
+  return renderResult(quantized, w, h, paletteHex, paletteRGB, beadSize, grid, showNums);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════════════════════════════
+const dropZone  = document.getElementById("dropZone");
+const dropText  = document.getElementById("dropText");
+const fileInput = document.getElementById("fileInput");
+const upPreview = document.getElementById("uploadPreview");
+const genBtn    = document.getElementById("generateBtn");
+const resultImg = document.getElementById("resultImg");
+const placehold = document.getElementById("placeholder");
+const spinner   = document.getElementById("spinner");
+const dlRow     = document.getElementById("download-row");
+const dlLink    = document.getElementById("downloadLink");
+
+let upFile = null, upImgEl = null;
+
+// slider live values
+["widthSlider","nColorsSlider","beadSizeSlider","gridSlider"].forEach(id => {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id.replace("Slider","Val"));
+  el.addEventListener("input", () => { valEl.textContent = el.value; });
+});
+
+// file handling
+dropZone.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", e => {
+  if (e.target.files.length) loadFile(e.target.files[0]);
+});
+dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault(); dropZone.classList.remove("dragover");
+  if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+});
+
+function loadFile(file) {
+  upFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      upImgEl = img;
+      upPreview.src = e.target.result;
+      upPreview.style.display = "block";
+      dropText.style.display = "none";
+      genBtn.disabled = false;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// generate
+genBtn.addEventListener("click", () => {
+  if (!upImgEl) return;
+
+  genBtn.disabled = true;
+  genBtn.textContent = "正在生成...";
+  placehold.style.display = "none";
+  resultImg.style.display = "none";
+  spinner.style.display = "block";
+  dlRow.style.display = "none";
+
+  const width  = +document.getElementById("widthSlider").value;
+  const nCols  = +document.getElementById("nColorsSlider").value;
+  const bSize  = +document.getElementById("beadSizeSlider").value;
+  const grid   = +document.getElementById("gridSlider").value;
+  const showN  = document.getElementById("showNumbers").checked;
+
+  // Use setTimeout to let the spinner render before heavy computation
+  setTimeout(() => {
+    const canvas = processImage(upImgEl, width, nCols, bSize, grid, showN);
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      resultImg.src = url;
+      resultImg.style.display = "block";
+      dlLink.href = url;
+      dlRow.style.display = "block";
+      spinner.style.display = "none";
+      genBtn.disabled = false;
+      genBtn.textContent = "生成拼豆图纸";
+    }, "image/png");
+  }, 50);
+});
+
+resultImg.addEventListener("click", () => dlLink.click());
+</script>
+</body>
+</html>
