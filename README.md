@@ -2,7 +2,7 @@
 
 上传任意图片，自动生成拼豆（Perler / Hama beads）图纸。每个格子里印有颜色编号，对照旁边的 **#RRGGBB** 色卡图例，直接照着拼就行。
 
-**[打开网页 →](https://fuse-beads.onrender.com)**
+**[打开网页 →](https://helotte.github.io/fuse-beads)**
 
 ## 预览
 
@@ -22,7 +22,7 @@
 
 ### 网页版（推荐）
 
-打开 [fuse-beads.onrender.com](https://fuse-beads.onrender.com)，上传图片，调好参数，点生成。结果可直接下载 PNG。
+打开 [helotte.github.io/fuse-beads](https://helotte.github.io/fuse-beads)，上传图片，调好参数，点生成。结果可直接下载 PNG。
 
 ### 命令行版
 
@@ -42,13 +42,6 @@ python fusing.py
 | `BEAD_SIZE` | 每颗拼豆的像素大小 |
 | `GRID` | 格子间距（像素） |
 
-## 本地开发
-
-```bash
-pip install -r requirements.txt
-python app.py        # 启动 Flask 开发服务器 → http://localhost:8080
-```
-
 ## 技术栈
 
-Python · Flask · NumPy · Pillow · 纯 NumPy k-means（零外部 ML 依赖）
+纯静态页面 — HTML · CSS · JavaScript · Canvas API，所有图片处理在浏览器本地完成，零依赖、零后端。Python 版本在 `beads.py` / `fusing.py` 中保留，供命令行使用。
