@@ -261,7 +261,7 @@ def build_beads_image(quantized_img, palette_hex, bead_size, grid,
                         draw.text((tx, ty), label, fill=text_color, font=font)
 
     legend = _build_legend(palette_hex, bead_size, grid)
-    combined = _hconcat(canvas, legend, grid_color)
+    combined = _vconcat(canvas, legend, grid_color)
     return combined
 
 
@@ -316,12 +316,12 @@ def _build_legend(palette_hex, bead_size, grid):
     return legend
 
 
-def _hconcat(left, right, fill_color):
-    """Horizontally concatenate two images, matching heights."""
-    lw, lh = left.size
-    rw, rh = right.size
-    max_h = max(lh, rh)
-    out = Image.new("RGB", (lw + rw, max_h), fill_color)
-    out.paste(left, (0, 0))
-    out.paste(right, (lw, (max_h - rh) // 2))
+def _vconcat(top, bottom, fill_color):
+    """Vertically stack two images, matching widths."""
+    tw, th = top.size
+    bw, bh = bottom.size
+    max_w = max(tw, bw)
+    out = Image.new("RGB", (max_w, th + bh), fill_color)
+    out.paste(top, (0, 0))
+    out.paste(bottom, ((max_w - bw) // 2, th))
     return out

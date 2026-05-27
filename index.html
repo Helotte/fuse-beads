@@ -203,17 +203,17 @@ function renderResult(quantized, w, h, paletteHex, paletteRGB,
   const gridH = h * (beadSize + grid) + grid;
   const legendW = _legendWidth(paletteHex.length, beadSize, grid);
   const legendH = _legendHeight(paletteHex.length, beadSize, grid);
-  const totalW = gridW + legendW;
-  const totalH = Math.max(gridH, legendH);
+  const totalW = Math.max(gridW, legendW);
+  const totalH = gridH + legendH;
 
   const canvas = document.createElement("canvas");
   canvas.width = totalW;
   canvas.height = totalH;
   const ctx = canvas.getContext("2d");
 
-  // background
+  // bead grid background (dark grey = grid lines)
   ctx.fillStyle = "rgb(60,60,60)";
-  ctx.fillRect(0, 0, totalW, totalH);
+  ctx.fillRect(0, 0, totalW, gridH);
 
   // ── bead grid ──
   for (let y = 0; y < h; y++) {
@@ -238,7 +238,7 @@ function renderResult(quantized, w, h, paletteHex, paletteRGB,
         const idx = quantized[y * w + x];
         const label = String(idx + 1);
         const tw = ctx.measureText(label).width;
-        if (tw > beadSize - 2) continue;  // skip if text doesn't fit
+        if (tw > beadSize - 2) continue;
         const [r, g, b] = paletteRGB[idx];
         ctx.fillStyle = luminance(r, g, b) < 140 ? "#fff" : "#000";
         const cx = grid + x * (beadSize + grid) + beadSize / 2;
@@ -248,15 +248,14 @@ function renderResult(quantized, w, h, paletteHex, paletteRGB,
     }
   }
 
-  // ── legend ──
-  const lx = gridW;
+  // ── legend (below the bead grid) ──
   const swatch = Math.max(beadSize, 16);
   const pad = grid * 4;
   const lineH = swatch + pad;
   const fontLegend = Math.max(10, swatch - 4);
 
   ctx.fillStyle = "#fff";
-  ctx.fillRect(lx, 0, legendW, totalH);
+  ctx.fillRect(0, gridH, totalW, legendH);
 
   ctx.fillStyle = "rgb(30,30,30)";
   ctx.font = `${fontLegend}px -apple-system, "Helvetica Neue", "PingFang SC", sans-serif`;
@@ -264,17 +263,15 @@ function renderResult(quantized, w, h, paletteHex, paletteRGB,
   ctx.textBaseline = "alphabetic";
 
   for (let i = 0; i < paletteHex.length; i++) {
-    const y = pad + i * lineH;
+    const y = gridH + pad + i * lineH;
     const [r, g, b] = paletteRGB[i];
 
-    // swatch rect
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(pad, y, swatch, swatch);
     ctx.strokeStyle = "rgb(40,40,40)";
     ctx.lineWidth = 2;
     ctx.strokeRect(pad, y, swatch, swatch);
 
-    // label
     ctx.fillStyle = "rgb(30,30,30)";
     const label = `#${i+1}  ${paletteHex[i]}`;
     ctx.fillText(label, pad + swatch + pad, y + swatch * 0.7);
